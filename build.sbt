@@ -10,6 +10,6 @@ lazy val root = (project in file(".")).
     name := "searcher",
     test in assembly := {},
     mainClass in assembly := Some("searcher.Main"),
-    assemblyJarName in assembly := "app.jar",
+    assemblyJarName in assembly := "../../app.jar",
     libraryDependencies += scalaTest % Test
   )
