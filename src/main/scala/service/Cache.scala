@@ -1,13 +1,10 @@
 package service
 
-import java.io._
-import java.nio.file.Paths
-
-import scala.annotation.tailrec
-import scala.util._
 import scala.io._
-
 import infrastructure._
+import infrastructure.resource.ResourceLookup
+
+import scala.util._
 
 trait Cache {
 
@@ -17,43 +14,38 @@ trait Cache {
 
 object Cache {
 
-  def apply(limit: Int, path: String, trimCommonPrefix: Boolean)(implicit codec: Codec, ordering: Ordering[Statistic]): Either[String, Cache] = {
+  def apply[A](
+    limit: Int,
+    args: Seq[A]
+  )(
+    implicit ordering: Ordering[Statistic],
+    lookup: ResourceLookup[A]
+  ): Either[String, CachedFile] = {
+
+    import infrastructure.resource._
     Try {
-      val root = Paths
-        .get(path)
-        .toAbsolutePath
-        .toFile
-      val entries = if (root.isDirectory) {
-        listFiles(root)
-          .filterNot(_.isDirectory)
-          .toList
-          .map(prepare)
-      } else {
-        List(prepare(root))
+      val entries = for {
+        arg <- args.seq
+      } yield {
+        withResources(Source.fromInputStream(lookup.getInputStream(arg))) { is =>
+          is.getLines()
+            .flatMap(_.split(delimiter))
+            .map(_.replaceAll(punctuation, ""))
+            .map(x => x -> Set(lookup.name(arg)))
+            .toMap
+        }
       }
-      apply(limit, entries, trimCommonPrefix)
+
+      val merged = merge(entries)
+      new CachedFile(merged, limit)
     } match {
       case Failure(ex) =>
         ex.printStackTrace()
-        Left(s"error while preparing cache at path $path: ${ex.getMessage}")
+        Left(s"error while preparing cache at path ${args.map(lookup.name).mkString(", ")}: ${ex.getMessage}")
       case Success(items) =>
         Right(items)
     }
-  }
 
-  def apply(limit: Int, tuple: Seq[FileMeta], trimCommonPrefix: Boolean)(implicit codec: Codec, ordering: Ordering[Statistic]): Cache = {
-    val entries = if (trimCommonPrefix) {
-      normalize(tuple).map(prepare)
-    } else {
-      tuple.map(prepare)
-    }
-    val merged = merge(entries)
-    new CachedFile(merged, limit)
-  }
-
-  private def listFiles(f: File): Array[File] = {
-    val these = f.listFiles
-    these ++ these.filter(_.isDirectory).flatMap(listFiles)
   }
 
   private def merge(
@@ -64,53 +56,6 @@ object Cache {
       case (dict, (k, v)) => dict + (k -> (v ++ dict.getOrElse(k, Nil)))
     })
     merged
-  }
-
-  private def prepare(file: File): FileMeta = {
-    file.getAbsolutePath -> new FileInputStream(file)
-  }
-
-  private def normalize(seq: Seq[FileMeta]): Seq[FileMeta] = {
-
-    def prefix(arg: String, root: String): String = arg
-      .zip(root)
-      .takeWhile { case (a, b) => a == b }
-      .map(_._1)
-      .mkString
-
-    @tailrec
-    def find(xs: Seq[String], root: String): String = xs match {
-      case h :: Nil => prefix(h, root)
-      case h :: t => find(t, prefix(h, root))
-    }
-
-    if (seq.length > 1) {
-      val (names, _) = seq.unzip
-      val commonPrefix = find(names.tail, names.head)
-
-      val normalized = seq.map {
-        case (key, value) =>
-          key.replace(commonPrefix, "") -> value
-      }
-
-      normalized
-    } else {
-      seq
-    }
-
-  }
-
-  private def prepare(tuple: FileMeta)(implicit codec: Codec): Map[Token, Set[Filename]] = {
-    val (name, is) = tuple
-    val names = Set(name)
-    val cache: Map[Token, Set[Filename]] = Source.fromInputStream(is)
-      .getLines()
-      .flatMap(_.split(delimiter))
-      .map(_.replaceAll(punctuation, ""))
-      .map(x => x -> names)
-      .toMap
-
-    cache
   }
 
 }

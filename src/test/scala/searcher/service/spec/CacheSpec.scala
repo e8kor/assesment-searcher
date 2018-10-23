@@ -6,6 +6,7 @@ import service.Cache
 class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
 
   import infrastructure.DescendingResultOrdering
+  private implicit val lookup = JarLookup
 
   private val limit = 10
 
@@ -14,7 +15,7 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
     val name = "/regular/file.txt"
     val is = getClass.getResourceAsStream(name)
     And("instance of cache")
-    val cache = Cache(limit, Seq(name -> is), false)
+    val cache = Cache(limit, Seq(name)).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq("Lorem", "ipsum"))
     Then("result percentage should be returned")
@@ -27,7 +28,7 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
     val name = "/regular/file.txt"
     val is = getClass.getResourceAsStream(name)
     And("instance of cache")
-    val cache = Cache(limit, Seq(name -> is), false)
+    val cache = Cache(limit, Seq(name)).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq("Lorem", "ENGLISH"))
     Then("result percentage should be returned")
@@ -37,9 +38,8 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
   it should "return 0 percentage match for keywords when only none exists in file content" in {
     Given("text file")
     val name = "/regular/file.txt"
-    val is = getClass.getResourceAsStream(name)
     And("instance of cache")
-    val cache = Cache(limit, Seq(name -> is), false)
+    val cache = Cache(limit, Seq(name)).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq("POLISH", "ENGLISH"))
     Then("result percentage should be returned")
@@ -49,9 +49,8 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
   it should "return 0 percentage match when no keywords passed" in {
     Given("text file")
     val name = "/regular/file.txt"
-    val is = getClass.getResourceAsStream(name)
     And("instance of cache")
-    val cache = Cache(limit, Seq(name -> is), false)
+    val cache = Cache(limit, Seq(name)).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq.empty)
     Then("result percentage should be returned")
@@ -62,10 +61,8 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
     Given("text file")
     val name1 = "/regular/file.txt"
     val name2 = "/regular/another.txt"
-    val is1 = getClass.getResourceAsStream(name1)
-    val is2 = getClass.getResourceAsStream(name2)
     And("instance of cache")
-    val cache = Cache(limit, Seq(name1 -> is1, name2 -> is2), false)
+    val cache = Cache(limit, Seq(name1, name2)).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq("Lorem", "Aliquam"))
     Then("result percentage should be returned")
@@ -83,9 +80,9 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
       "/extended/right/inner.txt",
       "/extended/another.txt",
       "/extended/root.txt"
-    ).map(name => name -> getClass.getResourceAsStream(name))
+    )
     And("instance of cache")
-    val cache = Cache(4, names, false)
+    val cache = Cache(4, names).right.get
     When("calling calculate")
     val percentage = cache.calculate(Seq("Lorem", "Aliquam", "Fusce", "Phasellus", "eu"))
     Then("result percentage should be returned")
@@ -95,7 +92,7 @@ class CacheSpec extends FlatSpec with Matchers with GivenWhenThen {
         "/extended/root.txt" -> 100,
         "/extended/nested/nested/inner.txt" -> 60,
         "/extended/another.txt" -> 60,
-        "/extended/right/inner.txt" -> 40
+        "/extended/left/inner.txt" -> 40
       ),
       "expected to files in proper order with"
     )

@@ -1,5 +1,3 @@
-import java.io.InputStream
-
 package object service {
 
   type Token = String
@@ -7,7 +5,5 @@ package object service {
   type Filename = String
 
   type Statistic = (String, Int)
-
-  type FileMeta = (String, InputStream)
 
 }

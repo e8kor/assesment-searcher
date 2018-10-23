@@ -1,6 +1,6 @@
 package service
 
-import scala.io.Codec
+import infrastructure.resource.ResourceLookup
 
 trait Application {
 
@@ -10,24 +10,30 @@ trait Application {
 
 object Application {
 
-  def apply(
-    path: String,
+  def apply[A](
+    path: Seq[A],
     limit: Int,
     reader: Reader,
     writer: Writer
-  )(implicit codec: Codec): Either[String, Application] = {
+  )(
+    implicit lookup: ResourceLookup[A],
+    ordering: Ordering[Statistic]
+  ): Either[String, Application] = {
     val reader: Reader = Reader()
     val scanner: Scanner = Scanner(reader)
     apply(path, limit, scanner, writer)
   }
 
-  def apply(
-    path: String,
+  def apply[A](
+    path: Seq[A],
     limit: Int,
     scanner: Scanner,
     writer: Writer
-  )(implicit codec: Codec): Either[String, Application] = {
-    Cache(limit, path, false)
+  )(
+    implicit lookup: ResourceLookup[A],
+    ordering: Ordering[Statistic]
+  ): Either[String, Application] = {
+    Cache(limit, path)
       .right
       .map(apply(_, scanner, writer))
   }

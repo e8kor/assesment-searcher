@@ -21,6 +21,9 @@ java -jar app.jar /path/to/search/root
 Reserved words:
 * ```:quit``` exiting application
 
-Files home location must be passed as a first argument
-Strings separated by whitespace considered as list of argument to search for
+
+Files home location must be passed as a first argument. Path must be or directory or single file.
+
+Strings separated by whitespace considered as list of argument to search for.
+
 Single word argument must contain no spaces.

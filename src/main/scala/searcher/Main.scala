@@ -1,16 +1,17 @@
 package searcher
 
 import service._
-
+import infrastructure.files._
 object Main extends App {
 
   import infrastructure.DescendingResultOrdering
+  implicit val lookup = infrastructure.resource.FileLookup
 
   if (args.length == 0 || args(0).trim() == "") {
     println("Search home path not specified. Please check README usage chapter")
     sys.exit(-1)
   } else {
-    val path = args(0)
+    val path = listFiles(args(0))
     val limit = 10
     val reader = Reader()
     val writer = Writer("%s : %d%%", "no matches found")
